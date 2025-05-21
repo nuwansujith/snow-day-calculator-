@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow Day Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-md mx-auto bg-white/80 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden p-8">
+            <h1 class="text-4xl font-bold text-center text-blue-900 mb-2">❄️ Snow Day Calculator</h1>
+            <p class="text-center text-blue-800 mb-8">Enter your postal code to check snow day chances</p>
+            
+            <div class="flex mb-6">
+                <input 
+                    type="text" 
+                    id="postalCode" 
+                    placeholder="e.g. 10001" 
+                    class="flex-grow px-4 py-3 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-blue-200"
+                >
+                <button 
+                    id="calculateBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-r-lg transition-colors duration-300"
+                >
+                    Calculate
+                </button>
+            </div>
+            
+            <div id="result" class="hidden bg-blue-50/80 rounded-lg p-6 text-blue-900 border border-blue-200"></div>
+        </div>
+    </div>
+
+    <!-- Snowflakes container -->
+    <div id="snowflakes" class="fixed top-0 left-0 w-full h-full pointer-events-none z-10"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+/* Snowfall animations */
+@keyframes fall {
+    to {
+        transform: translateY(calc(100vh + 30px)) translateX(var(--sway, 0px));
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg) translateX(var(--sway, 0px));
+    }
+    to {
+        transform: rotate(360deg) translateX(var(--sway, 0px));
+    }
+}
+
+.snowflake {
+    will-change: transform;
+    user-select: none;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+}
+
+/* Loading spinner */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .container {
+        padding: 1rem;
+    }
+    #result {
+        padding: 1rem;
+    }
+}
