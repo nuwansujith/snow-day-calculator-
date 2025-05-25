@@ -1,36 +1,70 @@
-/* Snowfall animations */
+/* Critical CSS - Loads first */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #ebf4ff 0%, #b3d1ff 100%);
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Snowflake animation - non-blocking */
 @keyframes fall {
     to {
         transform: translateY(calc(100vh + 30px)) translateX(var(--sway, 0px));
-    }
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg) translateX(var(--sway, 0px));
-    }
-    to {
-        transform: rotate(360deg) translateX(var(--sway, 0px));
+        opacity: 0;
     }
 }
 
 .snowflake {
-    will-change: transform;
+    position: absolute;
+    pointer-events: none;
     user-select: none;
+    will-change: transform, opacity;
+    color: rgba(255, 255, 255, 0.9);
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+    z-index: 10;
 }
 
-/* Loading spinner */
-.animate-spin {
+/* Optimized loading states */
+.loading-spinner {
     animation: spin 1s linear infinite;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    width: 24px;
+    height: 24px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-    .container {
-        padding: 1rem;
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Reduced motion alternative */
+@media (prefers-reduced-motion: reduce) {
+    .snowflake {
+        animation: none !important;
     }
-    #result {
-        padding: 1rem;
+    
+    .loading-spinner {
+        animation-duration: 2s;
+    }
+}
+
+/* Print styles */
+@media print {
+    #snowflakes, button {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
     }
 }
