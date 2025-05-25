@@ -27,21 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function checkSnowDay(postalCode) {
         try {
-            // First get location data from postal code
-            const geoResponse = await fetch(
-                `https://api.openweathermap.org/geo/1.0/zip?zip=${postalCode},US&appid=${API_KEY}`
-            );
-            
-            if (!geoResponse.ok) {
-                throw new Error('Location not found. Please check your postal code.');
-            }
-            
-            const locationData = await geoResponse.json();
-            const { lat, lon, name: locationName } = locationData;
-            
-            // Then get weather forecast
+            // First get weather data directly by ZIP code
             const weatherResponse = await fetch(
-                `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=imperial`
+                `https://api.openweathermap.org/data/2.5/forecast?zip=${postalCode},US&appid=${API_KEY}&units=imperial`
             );
             
             if (!weatherResponse.ok) {
@@ -49,45 +37,58 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const weatherData = await weatherResponse.json();
+            
+            // Get location name from the first forecast entry
+            const locationName = weatherData.city.name || "your area";
+            
             analyzeWeather(weatherData, locationName);
             
         } catch (error) {
             showResult(`<p class="text-red-600">${error.message}</p>`, 'error');
-            console.error(error);
+            console.error('Error:', error);
         }
     }
     
     function analyzeWeather(weatherData, locationName) {
-        // Analyze next 24 hours of forecast
+        // Get current time and time 24 hours from now
         const now = new Date();
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
+        // Filter forecasts for the next 24 hours
         const relevantForecasts = weatherData.list.filter(forecast => {
             const forecastTime = new Date(forecast.dt * 1000);
             return forecastTime >= now && forecastTime <= tomorrow;
         });
         
-        // Calculate snow probability
+        // Initialize variables
         let snowProbability = 0;
         let snowAmount = 0;
         let minTemp = Infinity;
         let maxWind = 0;
-        let conditions = [];
+        let hasPrecipitation = false;
         
+        // Analyze each relevant forecast
         relevantForecasts.forEach(forecast => {
             // Check for snow
             if (forecast.snow && forecast.snow['3h']) {
                 snowAmount += forecast.snow['3h'];
+                snowProbability += 40; // Significant boost for actual snow
+            }
+            
+            // Check for rain that could turn to snow
+            if (forecast.rain && forecast.rain['3h'] && forecast.main.temp < 35) {
+                snowProbability += 20;
             }
             
             // Check weather conditions
             forecast.weather.forEach(weather => {
-                conditions.push(weather.main);
                 if (weather.main === 'Snow') {
                     snowProbability += 30;
-                } else if (weather.main === 'Rain' && forecast.main.temp < 32) {
-                    snowProbability += 20; // Freezing rain counts
+                    hasPrecipitation = true;
+                } else if (weather.main === 'Rain' && forecast.main.temp < 35) {
+                    snowProbability += 15; // Freezing rain
+                    hasPrecipitation = true;
                 }
             });
             
@@ -102,41 +103,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Calculate probability based on multiple factors
-        snowProbability = calculateSnowProbability({
-            snowAmount,
-            minTemp,
-            maxWind,
-            conditions,
-            baseProbability: snowProbability
-        });
+        // Adjust probability based on temperature
+        if (minTemp < 32) {
+            snowProbability += 20;
+        } else if (minTemp < 35) {
+            snowProbability += 10;
+        }
+        
+        // Adjust for wind chill
+        if (maxWind > 15 && minTemp < 40) {
+            snowProbability += 10;
+        }
+        
+        // If no precipitation at all, cap probability
+        if (!hasPrecipitation) {
+            snowProbability = Math.min(30, snowProbability);
+        }
+        
+        // Ensure probability is between 0-100
+        snowProbability = Math.min(100, Math.max(0, Math.round(snowProbability)));
         
         // Determine likelihood message and effects
         displayResults(locationName, snowProbability, snowAmount, minTemp, maxWind);
-    }
-    
-    function calculateSnowProbability(factors) {
-        let probability = factors.baseProbability;
-        
-        // Adjust based on snow amount (1 inch = +10% up to 50%)
-        if (factors.snowAmount > 0) {
-            probability += Math.min(50, factors.snowAmount * 10);
-        }
-        
-        // Adjust based on temperature (below freezing)
-        if (factors.minTemp < 32) {
-            probability += 20;
-        } else if (factors.minTemp < 35) {
-            probability += 10;
-        }
-        
-        // Adjust based on wind (wind chill factor)
-        if (factors.maxWind > 15 && factors.minTemp < 40) {
-            probability += 10;
-        }
-        
-        // Cap probability between 0-100%
-        return Math.min(100, Math.max(0, probability));
     }
     
     function displayResults(locationName, snowProbability, snowAmount, minTemp, maxWind) {
@@ -183,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="w-full bg-gray-200 rounded-full h-4 mb-3">
                     <div class="bg-blue-600 h-4 rounded-full" style="width: ${snowProbability}%"></div>
                 </div>
-                <p class="text-right text-sm">${Math.round(snowProbability)}% probability</p>
+                <p class="text-right text-sm">${snowProbability}% probability</p>
             </div>
             
             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -215,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDiv.classList.remove('hidden');
     }
     
-    // Enhanced Snowfall Effect
+    // Snowfall effect functions
     function createSnowflake(blizzard = false) {
         const snowflake = document.createElement('div');
         snowflake.innerHTML = blizzard ? '❄️' : Math.random() > 0.5 ? '❄️' : '❅';
@@ -236,16 +224,11 @@ document.addEventListener('DOMContentLoaded', function() {
             Math.random() * 0.5 + 0.3 : 
             Math.random() * 0.7 + 0.3;
         
-        const zIndex = Math.floor(Math.random() * 5) + 5;
-        const swayAmount = Math.random() * 40 - 20;
-        
         snowflake.style.left = `${startX}px`;
         snowflake.style.top = '-30px';
         snowflake.style.fontSize = `${size}px`;
         snowflake.style.opacity = opacity;
-        snowflake.style.zIndex = zIndex;
         snowflake.style.animation = `fall ${animationDuration}s linear ${delay}s infinite`;
-        snowflake.style.transform = `translateX(${swayAmount}px)`;
         
         return snowflake;
     }
@@ -260,21 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const flake = createSnowflake(blizzard);
                 snowflakesContainer.appendChild(flake);
                 snowflakes.push(flake);
-                
-                // Make some flakes rotate
-                if (Math.random() > 0.7) {
-                    flake.style.animation += `, spin ${Math.random() * 5 + 3}s linear infinite`;
-                }
             }, Math.random() * 2000);
         }
-        
-        // For blizzard effect, add wind sound (commented out as it requires user interaction)
-        // if (blizzard) {
-        //     const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-cold-blizzard-1231.mp3');
-        //     audio.volume = 0.3;
-        //     audio.loop = true;
-        //     audio.play();
-        // }
     }
     
     function clearSnowfall() {
